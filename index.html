@@ -88,7 +88,17 @@
         .tab-btn[data-tab="bills"].active      { background: linear-gradient(135deg,#14b8a6,#06b6d4); }
 
         /* Daily tab filter chips */
-        .acc-filter-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+     <div class="acc-filter-bar" id="accFilterBar">
+    <span class="filter-chip active" data-filter="all" onclick="setAccFilter('all')">All</span>
+    <span class="filter-chip" data-filter="bank" onclick="setAccFilter('bank')">🏦 Banks</span>
+    <span class="filter-chip" data-filter="cash" onclick="setAccFilter('cash')">💵 Cash</span>
+    <span class="filter-chip" data-filter="cc" onclick="setAccFilter('cc')">💳 Cards</span>
+    
+    <!-- Button moved here and class updated to match -->
+    <span class="filter-chip" id="accPickerBtn" onclick="toggleAccPicker()">
+        <i class="fa-solid fa-sliders"></i> Filter
+    </span>
+</div>
 
         /* ── SEARCH BAR ── */
         .txn-search-bar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
@@ -951,6 +961,95 @@
         #personalSortBy { cursor: pointer; appearance: auto; }
         #personalSortBy:focus { border-color: var(--accent-blue); }
 
+        /* =========================================================
+           DESKTOP VERSION (Screens wider than 768px)
+           ========================================================= */
+        @media (min-width: 768px) {
+            /* Hide the recent messages robot button on desktop */
+            #dailyFab button:first-child {
+                display: none !important;
+            }
+            /* 1. Expand the main container */
+            .container { 
+                max-width: 1000px; 
+                padding: 40px; 
+            }
+
+            /* 2. Stretch tabs evenly */
+            .tab-btn {
+                flex: 1;               /* Forces each tab to take up an equal fraction of the space */
+                text-align: center;    /* Keeps the text perfectly centered inside the expanded tab */
+                font-size: 14px;
+                padding: 12px 16px;
+            }
+
+            /* 3. Account Cards: Wrap to next line instead of horizontal scroll */
+            .acc-scroller { 
+                flex-wrap: wrap; 
+                justify-content: flex-start; 
+                overflow-x: visible;
+            }
+            .acc-card { 
+                flex: 1 1 220px; /* Cards stretch to fill space */
+            }
+
+            /* 4. Make Lists Grid-based (2 columns side-by-side) */
+            #emi-list, 
+            #monthlyEmiList, 
+            #bank-list, 
+            #cc-list, 
+            #sent-list, 
+            #received-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
+            /* Ensure section dividers span both columns in the grid */
+            .paid-section-divider {
+                grid-column: 1 / -1;
+            }
+
+            /* 5. Expand Category Grids in Modals (8 columns instead of 4) */
+            .cat-grid { 
+                grid-template-columns: repeat(8, 1fr); 
+            }
+
+            /* 6. Make Modals Wider */
+            .modal-content { 
+                max-width: 600px; 
+            }
+
+            /* 7. Keep the PIN Lock Keypad centered and normal size */
+            .pin-keypad { 
+                max-width: 350px; 
+                margin: 0 auto; 
+            }
+
+            /* 8. Optimize the EMI Calculator layout */
+            .calc-stats-row {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            /* 9. Make Tab Buttons slightly larger */
+            .tab-btn {
+                font-size: 14px;
+                padding: 12px 16px;
+            }
+            
+            /* 10. Daily Tracker Transactions Layout */
+            .txn-card {
+                padding: 16px 20px;
+            }
+        }
+
+        .acc-filter-bar { 
+    display: flex; 
+    gap: 8px; 
+    flex-wrap: wrap; /* This prevents the overlap */
+    margin-bottom: 12px; 
+    align-items: center; 
+}
     </style>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1542,33 +1641,28 @@
 <div class="modal" id="accountModal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 style="font-size: 18px;">Add Account</h3>
+            <h3 style="font-size: 18px;">Add Cash / Wallet</h3>
             <button class="close-btn" onclick="closeAccountModal()"><i class="fa-solid fa-times"></i></button>
         </div>
         <form id="accountForm" onsubmit="saveAccount(event)">
-            <!-- Step 1: Pick type first so source list filters correctly -->
-            <div class="form-group" style="margin-bottom:10px;">
-                <label>Account Type</label>
-                <select id="accType" onchange="refreshAccSourceList()">
-                    <option value="Bank">Bank Account</option>
-                    <option value="Credit Card">Credit Card</option>
-                    <option value="Cash">Cash / Wallet</option>
-                </select>
+            <!-- Forces the account type to Cash automatically -->
+            <input type="hidden" id="accType" value="Cash">
+            
+            <div class="form-group">
+                <label>Account Name</label>
+                <input type="text" id="accName" required placeholder="e.g. Petty Cash, Paytm Wallet">
             </div>
-            <!-- Step 2: Source selector filters to matching bank/CC -->
-            <div class="form-group" style="margin-bottom:10px;">
-                <label>Link from Bank & Cards <span style="color:var(--text-secondary);font-weight:400;">(or type manually)</span></label>
-                <select id="accSourceSelect" onchange="onAccSourceChange()" style="margin-bottom:0;">
-                    <option value="">— Type manually —</option>
-                </select>
+            
+            <div class="form-group">
+                <label>Available Balance (₹)</label>
+                <input type="number" step="any" id="accBalance" value="0" required>
             </div>
-            <!-- Linked info preview -->
-            <div id="accLinkedInfo" style="display:none;background:var(--input-bg);border:1px solid var(--accent-blue);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;line-height:1.8;">
-            </div>
-            <div class="form-group"><label>Account Name</label><input type="text" id="accName" required placeholder="e.g. IDFC Bank, HDFC Regalia"></div>
-            <div class="form-group"><label>Available Balance (₹)</label><input type="number" step="any" id="accBalance" value="0" required></div>
-            <p style="font-size: 11px; color: var(--text-secondary); margin-top:-5px; margin-bottom:15px;">*For Credit Cards, if you owe money, enter it as a negative number (e.g., -5000).</p>
-            <button type="submit" class="save-btn">Save Account</button>
+
+            <p style="font-size: 11px; color: var(--accent-blue); margin-bottom:15px; font-weight: 600;">
+                * Note: Real Bank Accounts and Credit Cards should be added using the "Bank & Cards" tab.
+            </p>
+            
+            <button type="submit" class="save-btn">Save Cash Account</button>
         </form>
     </div>
 </div>
@@ -2927,7 +3021,11 @@ if (savedTheme === "light") {
     function deleteAccount(id) {
         if(confirm("Delete this account?")) {
             accDatabase = accDatabase.filter(a => a.id !== id);
-            saveToCloud(); renderDailyTracker();
+            
+            // Replaced saveToCloud() with saveToCloudNow() to force immediate deletion
+            saveToCloudNow(); 
+            
+            renderDailyTracker();
         }
     }
 
@@ -3204,84 +3302,59 @@ if (savedTheme === "light") {
     let _selectedAccIds = new Set(); // empty = show all
 
     function toggleAccPicker() {
-        _accPickerOpen = !_accPickerOpen;
-        const menu = document.getElementById('accPickerMenu');
-        if (!_accPickerOpen) { menu.style.display = 'none'; return; }
+    _accPickerOpen = !_accPickerOpen;
+    const menu = document.getElementById('accPickerMenu');
+    if (!_accPickerOpen) { menu.style.display = 'none'; return; }
+    menu.innerHTML = '';
 
-        menu.innerHTML = '';
+    // 1. "Show All" option
+    const allOpt = document.createElement('div');
+    allOpt.className = 'cc-sort-opt';
+    allOpt.innerHTML = `✅ All Accounts`;
+    allOpt.onclick = () => { _accSubFilter = ''; renderDailyTracker(); menu.style.display = 'none'; };
+    menu.appendChild(allOpt);
 
-        // Normalize helper — removes extra spaces, lowercases for dedup key
-        const norm = s => (s || '').trim().replace(/\s+/g,' ').toLowerCase();
-
-        // Build a map: normalizedKey → { display: canonicalName, banks: count, ccs: count }
-        const ownerMap = new Map();
-
-        const addToMap = (rawName, isBankEntry) => {
-            if (!rawName || !rawName.trim()) return;
-            const key = norm(rawName);
-            if (!ownerMap.has(key)) ownerMap.set(key, { display: rawName.trim(), banks: 0, ccs: 0 });
-            if (isBankEntry) ownerMap.get(key).banks++;
-            else             ownerMap.get(key).ccs++;
-        };
-
-        if (_accFilter === 'all' || _accFilter === 'bank') {
-            bankDatabase.forEach(b => addToMap(b.holder, true));
-        }
-        if (_accFilter === 'all' || _accFilter === 'cc') {
-            ccDatabase.forEach(c => addToMap(c.owner, false));
-        }
-
-        if (ownerMap.size === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'cc-sort-opt';
-            empty.style.color = 'var(--text-secondary)';
-            empty.textContent = 'No named owners found';
-            menu.appendChild(empty);
-            menu.style.display = 'block';
-            return;
-        }
-
-        // "Show All" reset row
-        const allOpt = document.createElement('div');
-        allOpt.className = 'cc-sort-opt';
-        allOpt.style.cssText = 'font-weight:700;color:var(--accent-blue);border-bottom:1px solid var(--border-color);';
-        allOpt.innerHTML = _accSubFilter === '' ? '✅ All Owners' : '☐ Show All Owners';
-        allOpt.onclick = () => {
-            _accSubFilter = '';
-            document.getElementById('accPickerBtn').style.borderColor = '';
-            menu.style.display = 'none'; _accPickerOpen = false;
-            renderDailyTracker();
-        };
-        menu.appendChild(allOpt);
-
-        // One row per unique owner — sorted A-Z by display name
-        Array.from(ownerMap.entries())
-            .sort((a, b) => a[1].display.localeCompare(b[1].display))
-            .forEach(([key, info]) => {
-                const isActive = norm(_accSubFilter) === key;
-                const countParts = [];
-                if ((_accFilter === 'all' || _accFilter === 'bank') && info.banks > 0)
-                    countParts.push(info.banks + ' bank' + (info.banks > 1 ? 's' : ''));
-                if ((_accFilter === 'all' || _accFilter === 'cc') && info.ccs > 0)
-                    countParts.push(info.ccs + ' card' + (info.ccs > 1 ? 's' : ''));
-                const countText = countParts.length
-                    ? ` <span style="font-size:10px;color:var(--text-secondary);">(${countParts.join(', ')})</span>`
-                    : '';
-                const row = document.createElement('div');
-                row.className = 'cc-sort-opt';
-                row.innerHTML = `<span style="margin-right:8px;">${isActive ? '✅' : '⬜'}</span>👤 ${info.display}${countText}`;
-                row.onclick = () => {
-                    // Store the normalized key so matching works regardless of minor name variations
-                    _accSubFilter = isActive ? '' : key;
-                    document.getElementById('accPickerBtn').style.borderColor = _accSubFilter ? 'var(--accent-blue)' : '';
-                    menu.style.display = 'none'; _accPickerOpen = false;
-                    renderDailyTracker();
-                };
-                menu.appendChild(row);
-            });
-
-        menu.style.display = 'block';
+    // 2. Build grouped list based on filter
+    const ownerMap = new Map();
+    
+    // Logic to gather owners based on active _accFilter
+    if (_accFilter === 'all' || _accFilter === 'bank') {
+        bankDatabase.forEach(b => {
+            const key = b.holder || 'Unknown';
+            if(!ownerMap.has(key)) ownerMap.set(key, {name: key, count: 0});
+            ownerMap.get(key).count++;
+        });
     }
+    if (_accFilter === 'all' || _accFilter === 'cc') {
+        ccDatabase.forEach(c => {
+            const key = c.owner || 'Unknown';
+            if(!ownerMap.has(key)) ownerMap.set(key, {name: key, count: 0});
+            ownerMap.get(key).count++;
+        });
+    }
+
+    // 3. Render rows
+    ownerMap.forEach((info, key) => {
+        const row = document.createElement('div');
+        row.className = 'cc-sort-opt';
+        row.innerHTML = `👤 ${key} (${info.count} accounts)`;
+        row.onclick = () => {
+            _accSubFilter = key; 
+            renderDailyTracker(); 
+            menu.style.display = 'none';
+        };
+        menu.appendChild(row);
+    });
+
+    menu.style.display = 'block';
+}
+
+function setAccFilter(filter) {
+    _accFilter = filter;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+    renderDailyTracker();
+}
 
     document.addEventListener('click', e => {
         if (!e.target.closest('#accPickerMenu') && !e.target.closest('#accPickerBtn')) {
@@ -3406,49 +3479,63 @@ if (savedTheme === "light") {
         });
 
         // Bank accounts — use bank.id directly
+        // Bank accounts — ensure type is strictly 'Bank' for the filter
         bankDatabase.forEach(b => {
             let bal = b.initialBalance || 0;
             txnDatabase.filter(t => t.accountId === b.id).forEach(t => { bal += t.type==='Income' ? t.amount : -t.amount; });
-            allAccs.push({id: b.id, name: b.bankname+(b.branch?' - '+b.branch:''), type: b.acctype||'Bank', initialBalance: b.initialBalance||0, currentBal: bal, linkedBankId: b.id});
+            allAccs.push({
+                id: b.id, 
+                name: b.bankname+(b.branch?' - '+b.branch:''), 
+                type: 'Bank', // Force this to 'Bank' so the filter chip works
+                initialBalance: b.initialBalance||0, 
+                currentBal: bal, 
+                linkedBankId: b.id, 
+                holder: b.holder 
+            });
         });
 
-        // CC accounts — use cc.id directly
+        // CC accounts — ensure type is strictly 'Credit Card'
         ccDatabase.forEach(c => {
             let bal = c.initialBalance || 0;
             txnDatabase.filter(t => t.accountId === c.id).forEach(t => { bal += t.type==='Income' ? t.amount : -t.amount; });
-            allAccs.push({id: c.id, name: c.bankname+(c.name?' '+c.name:'')+(c.owner?' ('+c.owner+')':''), type:'Credit Card', initialBalance: c.initialBalance||0, currentBal: bal, linkedCCId: c.id});
+            allAccs.push({
+                id: c.id, 
+                name: c.bankname+(c.name?' '+c.name:'')+(c.owner?' ('+c.owner+')':''), 
+                type: 'Credit Card', // Force this to 'Credit Card'
+                initialBalance: c.initialBalance||0, 
+                currentBal: bal, 
+                linkedCCId: c.id, 
+                owner: c.owner
+            });
         });
 
         // Build the filtered account list
-        let filteredAccs = allAccs;
+        // Build the filtered account list and apply type filter
+        let filteredAccs = allAccs.filter(a => {
+            if (_accFilter === 'bank') return a.type === 'Bank';
+            if (_accFilter === 'cash') return a.type === 'Cash' || a.type === 'Manual';
+            if (_accFilter === 'cc')   return a.type === 'Credit Card';
+            return true; // for 'all'
+        });
 
-        // Apply type filter (All/Banks/Cards chips)
-        if (_accFilter === 'bank') {
-            filteredAccs = filteredAccs.filter(a => a.linkedBankId || (a.type === 'Bank' && !a.linkedCCId));
-        } else if (_accFilter === 'cc') {
-            filteredAccs = filteredAccs.filter(a => a.linkedCCId || a.type === 'Credit Card');
-        }
-
-        // Apply owner sub-filter from Filter button (normalized matching handles minor name variations)
-        if (_accSubFilter) {
-            const normSub = _accSubFilter.trim().replace(/\s+/g,' ').toLowerCase();
+        // Apply owner sub-filter (matches Bank holder or CC owner)
+        // Skip if 'cash' is active because cash accounts generally don't have an owner
+        if (_accSubFilter && _accFilter !== 'cash') {
+            const normSub = _accSubFilter.trim().replace(/\s+/g, ' ').toLowerCase();
             filteredAccs = filteredAccs.filter(a => {
-                if (a.linkedBankId) {
-                    const b = bankDatabase.find(x => x.id === a.linkedBankId);
-                    return b && (b.holder||'').trim().replace(/\s+/g,' ').toLowerCase() === normSub;
-                }
-                if (a.linkedCCId) {
-                    const c = ccDatabase.find(x => x.id === a.linkedCCId);
-                    return c && (c.owner||'').trim().replace(/\s+/g,' ').toLowerCase() === normSub;
-                }
-                return false;
+                const holder = (a.holder || a.owner || '').trim().replace(/\s+/g, ' ').toLowerCase();
+                return holder === normSub;
             });
         }
+        // 4. Calculate total balance ONLY for currently filtered accounts
+        const totalNetBalance = filteredAccs.reduce((sum, acc) => sum + (acc.currentBal || 0), 0);
 
-        const totalNetBalance = filteredAccs.reduce((s,a) => s + a.currentBal, 0);
+        // 5. Update the display element
         const netWorthEl = document.getElementById('totalAvailableBalance');
-        netWorthEl.innerText = formatINR(totalNetBalance);
-        netWorthEl.classList.toggle('negative', totalNetBalance < 0);
+        if (netWorthEl) {
+            netWorthEl.innerText = formatINR(totalNetBalance);
+            netWorthEl.classList.toggle('negative', totalNetBalance < 0);
+        }
 
         if (filteredAccs.length === 0) {
             accScroller.innerHTML = `<div style="padding:15px;color:var(--text-secondary);font-size:12px;">${
@@ -7316,7 +7403,7 @@ function buildCatGrid(gridId, hiddenId, selected) {
             + '</head><body>'
             + '<div style="max-width:700px;margin:0 auto;padding:24px 16px;">'
             + '<div style="background:linear-gradient(135deg,#5b8def,#a78bfa);border-radius:16px;padding:24px;margin-bottom:20px;color:#fff;">'
-            + '<div style="font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:4px;">💰 FINANCE TOOLKIT</div>'
+            + '<div style="font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:4px;">💰 Barakafy Pro</div>'
             + '<div style="font-size:13px;opacity:0.85;">Transaction Report &nbsp;·&nbsp; ' + fromFmt + ' – ' + toFmt + '</div>'
             + '<div style="font-size:11px;opacity:0.65;margin-top:4px;">by Type01warrior</div>'
             + '</div>'
@@ -7802,7 +7889,7 @@ function startReminderCheck() {
 
 function sendReminderNotification() {
     if (Notification.permission === "granted") {
-        new Notification("Finance Toolkit", {
+        new Notification("Barakafy Pro", {
             body: "Time to add your daily transactions! 💰",
             icon: "https://cdn-icons-png.flaticon.com/512/2654/2654261.png"
         });
