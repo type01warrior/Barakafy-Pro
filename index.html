@@ -87,19 +87,6 @@
         .tab-btn[data-tab="reports"].active    { background: linear-gradient(135deg,#ec4899,#f43f5e); }
         .tab-btn[data-tab="bills"].active      { background: linear-gradient(135deg,#14b8a6,#06b6d4); }
 
-        /* Daily tab filter chips */
-     <div class="acc-filter-bar" id="accFilterBar">
-    <span class="filter-chip active" data-filter="all" onclick="setAccFilter('all')">All</span>
-    <span class="filter-chip" data-filter="bank" onclick="setAccFilter('bank')">🏦 Banks</span>
-    <span class="filter-chip" data-filter="cash" onclick="setAccFilter('cash')">💵 Cash</span>
-    <span class="filter-chip" data-filter="cc" onclick="setAccFilter('cc')">💳 Cards</span>
-    
-    <!-- Button moved here and class updated to match -->
-    <span class="filter-chip" id="accPickerBtn" onclick="toggleAccPicker()">
-        <i class="fa-solid fa-sliders"></i> Filter
-    </span>
-</div>
-
         /* ── SEARCH BAR ── */
         .txn-search-bar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
         .txn-search-input { width:100%; padding:10px 12px 10px 36px; background:var(--input-bg); border:1px solid var(--border-color); border-radius:10px; color:var(--text-primary); font-family:'Lexend',sans-serif; font-size:13px; position:relative; box-sizing:border-box; }
@@ -136,6 +123,73 @@
         .receipt-preview { position:relative; display:inline-block; }
         .receipt-thumb { width:60px; height:60px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); }
         .receipt-remove { position:absolute; top:-6px; right:-6px; background:var(--accent-red); color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+        /* ── ATTACHMENT ROW (Receipt + Voice Note, 2-col grid) ──
+           NOTE: selectors are written as `.form-group label.xxx` to beat the
+           global `.form-group label { display:block; margin-bottom:8px; ... }`
+           rule defined earlier — without this specificity bump, the buttons
+           would render as block elements and the icon+text would drift left
+           instead of being centered by the flex layout. */
+        .attach-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:0; }
+        .attach-col { display:flex; flex-direction:column; gap:6px; min-width:0; }
+
+        .form-group label.attach-caption,
+        label.attach-caption {
+            display:block;
+            font-size:11px;
+            font-weight:600;
+            letter-spacing:0.6px;
+            color:var(--text-secondary);
+            text-transform:uppercase;
+            margin:0 0 0 2px;       /* tiny indent to match input padding */
+        }
+
+        .form-group label.attach-btn,
+        label.attach-btn {
+            display:flex;
+            align-items:center;
+            justify-content:center;     /* centers icon+text as a unit */
+            gap:8px;
+            width:100%;
+            height:46px;
+            padding:0 12px;
+            margin:0;                   /* override .form-group label { margin-bottom:8px } */
+            background:var(--input-bg);
+            border:1px solid var(--border-color);
+            border-radius:10px;
+            font-size:12.5px;
+            font-weight:600;
+            line-height:1;
+            letter-spacing:0.4px;
+            color:var(--text-primary);
+            text-transform:uppercase;   /* matches the rest of the form's label style */
+            cursor:pointer;
+            user-select:none;
+            -webkit-user-select:none;
+            -webkit-tap-highlight-color:transparent;
+            box-sizing:border-box;
+            transition:background .15s ease, border-color .15s ease, color .15s ease, transform .08s ease;
+        }
+        .form-group label.attach-btn:hover,
+        label.attach-btn:hover  { background:var(--card-bg); }
+        .form-group label.attach-btn:active,
+        label.attach-btn:active { transform:scale(0.985); }
+        .form-group label.attach-btn i,
+        label.attach-btn i {
+            font-size:14px;
+            color:var(--text-secondary);
+            line-height:1;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .form-group label.attach-btn.has-attachment,
+        label.attach-btn.has-attachment   { border-color:var(--accent-blue); color:var(--accent-blue); }
+        .form-group label.attach-btn.has-attachment i,
+        label.attach-btn.has-attachment i { color:var(--accent-blue); }
+        /* Recording state: red border + red icon/text */
+        #voiceNoteBtn.recording   { border-color:var(--accent-red) !important; color:var(--accent-red) !important; }
+        #voiceNoteBtn.recording i { color:var(--accent-red) !important; }
 
         /* ── GEO TAG ── */
         .geo-tag-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--input-bg); border:1px solid var(--border-color); border-radius:10px; font-size:12px; color:var(--text-secondary); cursor:pointer; }
@@ -1719,7 +1773,10 @@
         <form id="txnForm" onsubmit="saveTransaction(event)">
             <input type="hidden" id="txnType" value="Expense">
             <div class="form-row">
-                <div class="form-group"><label>Amount (₹)</label><input type="number" step="any" id="txnAmt" required oninput="triggerAISuggest()"></div>
+                <div class="form-group">
+        <label>Amount (₹)</label>
+        <input type="number" step="any" id="txnAmt" required oninput="triggerAISuggest()">
+    </div>
                 <div class="form-group"><label>Date</label><input type="date" id="txnDate" required></div>
             </div>
             <div class="form-group"><label>Time</label><input type="time" id="txnTime"></div>
@@ -1757,17 +1814,39 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>Receipt / Screenshot</label>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <label for="txnReceiptFile" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--input-bg);border:1px solid var(--border-color);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-secondary);">
-                        <i class="fa-solid fa-camera"></i> Attach Photo
-                    </label>
-                    <input type="file" id="txnReceiptFile" accept="image/*" style="display:none;" onchange="handleReceiptUpload(this)">
-                    <div id="receiptPreviewWrap" style="display:none;" class="receipt-preview">
-                        <img id="receiptThumb" class="receipt-thumb">
-                        <button type="button" class="receipt-remove" onclick="clearReceipt()">×</button>
+                <!-- Two-column attachment row: matched height/width buttons, each with its own caption -->
+                <div class="attach-row">
+                    <div class="attach-col">
+                        <label class="attach-caption">RECEIPT / SCREENSHOT</label>
+                        <label for="txnReceiptFile" class="attach-btn" id="receiptBtn">
+                            <i class="fa-solid fa-camera"></i>
+                            <span>Attach Photo</span>
+                        </label>
+                        <input type="file" id="txnReceiptFile" accept="image/*" style="display:none;" onchange="handleReceiptUpload(this)">
+                    </div>
+                    <div class="attach-col">
+                        <label class="attach-caption">VOICE NOTE</label>
+                        <label id="voiceNoteBtn" class="attach-btn" onclick="toggleVoiceRecording()">
+                            <i id="voiceNoteBtnIcon" class="fa-solid fa-microphone"></i>
+                            <span id="voiceNoteBtnLabel">Voice Note</span>
+                        </label>
                     </div>
                 </div>
+
+                <!-- Spans the full width below the two buttons -->
+                <div id="receiptPreviewWrap" style="display:none;margin-top:10px;" class="receipt-preview">
+                    <img id="receiptThumb" class="receipt-thumb">
+                    <button type="button" class="receipt-remove" onclick="clearReceipt()">×</button>
+                </div>
+                <div id="voiceRecordingIndicator" style="display:none;align-items:center;gap:8px;margin-top:8px;">
+                    <i class="fa-solid fa-circle" style="color:var(--accent-red);animation:blink 1s infinite;"></i>
+                    <span style="font-size:12px;color:var(--accent-red);font-weight:600;">Recording… <span id="voiceNoteTimer">0:00</span></span>
+                </div>
+                <div id="voiceNotePreview" style="display:none;margin-top:10px;">
+                    <audio id="voiceNoteAudio" controls style="width:100%;height:36px;border-radius:8px;"></audio>
+                    <button type="button" onclick="clearVoiceNote()" style="margin-top:4px;font-size:11px;color:var(--accent-red);background:none;border:none;cursor:pointer;">✕ Remove voice note</button>
+                </div>
+                <input type="hidden" id="txnVoiceNote" value="">
                 <input type="hidden" id="txnReceipt" value="">
             </div>
             <div class="form-group">
@@ -2316,6 +2395,21 @@ if (savedTheme === "light") {
         firebase.initializeApp(firebaseConfig);
         auth = firebase.auth();
         db   = firebase.firestore();
+        // Enable offline persistence so:
+        //   • reads hit the local IndexedDB cache first (fast cold start)
+        //   • writes made offline are queued and flushed automatically on reconnect
+        //   • the realtime listener below still fires fresh server snapshots once online
+        // synchronizeTabs=true is safe for the WebView (only one tab) and required
+        // if the user has the same account open in multiple browser tabs on the web.
+        try {
+            db.enablePersistence({ synchronizeTabs: true }).catch(function(e) {
+                // Common reasons: another tab already owns persistence, or browser
+                // doesn't support IndexedDB. Either way the app still works online.
+                if (e && e.code !== 'failed-precondition' && e.code !== 'unimplemented') {
+                    console.warn('Firestore persistence:', e.code, e.message);
+                }
+            });
+        } catch (_) { /* older SDKs */ }
     } catch(e) {
         console.error('Firebase failed:', e);
         setTimeout(function() { var err = document.getElementById('si-error'); if (err) { err.innerText = 'Network error. Check internet and restart.'; err.classList.add('show'); } }, 500);
@@ -2572,19 +2666,15 @@ if (savedTheme === "light") {
                 : (getEnabledTabs()[0] || 'daily');
             executeTabSwitch(firstTab);
             if (loader) loader.style.display = 'none';
-            // Background Firestore sync — merges (never overwrites) then re-renders
-            loadFromCloud().then(() => {
-                applyTabVisibility();
-                const activeTab = appSettings.defaultTab && getEnabledTabs().includes(appSettings.defaultTab)
-                    ? appSettings.defaultTab
-                    : (getEnabledTabs()[0] || 'daily');
-                executeTabSwitch(activeTab);
-                // Push merged/corrected data back to Firestore so next load is clean
-                saveToCloud();
-            }).catch(() => {});
+            // Start the realtime Firestore listener — every change on any device
+            // (web tab or phone) fires this within ~1s. The first snapshot also
+            // serves as the initial load, so we don't need a separate get().
+            subscribeToCloud();
         } else {
             currentUser = null;
             if (loader) loader.style.display = 'none';
+            // Tear down any active realtime listener from a previous session.
+            unsubscribeFromCloud();
             document.getElementById('login-screen').style.display = 'flex';
             document.getElementById('userChip').style.display = 'flex';  // keep chip visible always
             // ── Populate user-menu dropdown (logged-out state) ──
@@ -2595,6 +2685,144 @@ if (savedTheme === "light") {
             document.getElementById('userAvatarFallback').innerHTML = '<i class="fa-solid fa-user" style="font-size:14px;"></i>';
         }
     });
+
+    // ── Realtime Firestore sync (replaces one-shot loadFromCloud) ──────────
+    //
+    // Why a listener instead of get(): the user wants edits on phone to show up
+    // on web within ~1s and vice versa. onSnapshot() gives us that for free.
+    //
+    // Three things to be careful about:
+    //  1. SELF-WRITE LOOPS — every saveToCloud() echoes back as a snapshot.
+    //     We skip snapshots with metadata.hasPendingWrites=true (local-only
+    //     echo before the server has acknowledged the write). The follow-up
+    //     server-confirmed snapshot is processed normally; since the data is
+    //     already in our state, it's a no-op.
+    //  2. INITIAL-LOAD MERGE — the first snapshot may arrive while the user
+    //     has already added a local transaction since last sign-in. We keep
+    //     the existing local-wins merge for the first snapshot only.
+    //  3. EDIT-IN-PROGRESS CLOBBER — if a remote update arrives while a modal
+    //     is open with unsaved form data, we still apply the data update but
+    //     do NOT re-render the active modal (the modal owns its inputs).
+    let _cloudUnsubscribe   = null;
+    let _initialSnapshotApplied = false;
+
+    function unsubscribeFromCloud() {
+        if (_cloudUnsubscribe) {
+            try { _cloudUnsubscribe(); } catch (_) {}
+            _cloudUnsubscribe = null;
+        }
+        _initialSnapshotApplied = false;
+    }
+
+    function subscribeToCloud() {
+        if (!currentUser) return;
+        unsubscribeFromCloud();
+        _cloudUnsubscribe = db.collection('users').doc(currentUser.uid)
+            .onSnapshot({ includeMetadataChanges: false }, function(doc) {
+                // Skip our own pending local writes — they'll fire again with
+                // hasPendingWrites=false once the server confirms.
+                if (doc.metadata && doc.metadata.hasPendingWrites) return;
+
+                if (!doc.exists) {
+                    // First-time user — push current local data up so the doc
+                    // exists for the listener to track.
+                    _initialSnapshotApplied = true;
+                    if (emiDatabase.length || accDatabase.length || txnDatabase.length
+                        || bankDatabase.length || ccDatabase.length || personalDatabase.length) {
+                        saveToCloud();
+                    }
+                    return;
+                }
+                applyCloudSnapshot(doc.data(), _initialSnapshotApplied);
+                _initialSnapshotApplied = true;
+            }, function(err) {
+                console.error('Cloud listener error:', err);
+                showSync('error');
+                // Fall back to a single get() so we at least show *something*.
+                loadFromCloud().catch(function(){});
+            });
+    }
+
+    function applyCloudSnapshot(d, isLiveUpdate) {
+        // Snapshot local arrays so we can merge on the very first load only.
+        const localTxnsBefore = isLiveUpdate ? null : [...txnDatabase];
+        const localAccsBefore = isLiveUpdate ? null : [...accDatabase];
+
+        emiDatabase      = d.emis     || [];
+        appSettings      = d.settings || appSettings;
+        bankDatabase     = d.banks    || [];
+        ccDatabase       = d.ccs      || [];
+        personalDatabase = d.personal || [];
+        categoryDatabase = d.cats || categoryDatabase || DEFAULT_CATEGORIES;
+        budgetDatabase   = d.budgets  || [];
+        billDatabase     = d.bills    || [];
+
+        const cloudTxns = d.txns || [];
+        if (isLiveUpdate) {
+            // Cross-device update — remote is authoritative.
+            txnDatabase = cloudTxns;
+        } else {
+            // Initial load — local wins for items that exist on both sides.
+            const txnMap = new Map();
+            cloudTxns.forEach(t => txnMap.set(t.id, t));
+            localTxnsBefore.forEach(t => txnMap.set(t.id, t));
+            txnDatabase = Array.from(txnMap.values());
+        }
+
+        const cloudAccs = d.accounts || [];
+        if (isLiveUpdate) {
+            accDatabase = cloudAccs;
+        } else {
+            const cloudAccIds = new Set(cloudAccs.map(a => a.id));
+            const localAccsToKeep = localAccsBefore.filter(a =>
+                !cloudAccIds.has(a.id) &&
+                txnDatabase.some(t => t.accountId === a.id)
+            );
+            accDatabase = [...cloudAccs, ...localAccsToKeep];
+        }
+
+        if (typeof syncAccountsFromBankCards === 'function') syncAccountsFromBankCards();
+
+        // Mirror to localStorage so the next cold start is instant.
+        try {
+            localStorage.setItem('type01_finance_db_v6',    JSON.stringify(emiDatabase));
+            localStorage.setItem('type01_finance_accs',     JSON.stringify(accDatabase));
+            localStorage.setItem('type01_finance_txns',     JSON.stringify(txnDatabase));
+            localStorage.setItem('type01_finance_settings', JSON.stringify(appSettings));
+            localStorage.setItem('type01_finance_banks',    JSON.stringify(bankDatabase));
+            localStorage.setItem('type01_finance_ccs',      JSON.stringify(ccDatabase));
+            localStorage.setItem('type01_finance_personal', JSON.stringify(personalDatabase));
+            localStorage.setItem('type01_cats',             JSON.stringify(categoryDatabase));
+            localStorage.setItem('type01_budgets',          JSON.stringify(budgetDatabase));
+            localStorage.setItem('type01_bills',            JSON.stringify(billDatabase));
+        } catch (_) {}
+
+        if (typeof updateCategoryDropdowns === 'function') updateCategoryDropdowns();
+
+        // Re-render whichever views are visible. Skip if a modal is open —
+        // the modal owns its inputs and we don't want to disturb the user mid-edit.
+        const anyModalOpen = !!document.querySelector(
+            '#txnModal[style*="flex"], #accountModal[style*="flex"], ' +
+            '#emiModal[style*="flex"], #ccBillAmountModal[style*="flex"]'
+        );
+        if (!anyModalOpen) {
+            if (typeof applyTabVisibility   === 'function') applyTabVisibility();
+            if (typeof renderDailyTracker   === 'function') renderDailyTracker();
+            if (typeof renderBankCards      === 'function') renderBankCards();
+            if (typeof renderEMIs           === 'function') renderEMIs();
+            if (typeof renderPersonalLoans  === 'function') renderPersonalLoans();
+            if (typeof renderBudgets        === 'function') renderBudgets();
+            if (typeof renderBills          === 'function') renderBills();
+        }
+
+        // Reflect "synced from cloud" briefly so the user knows the live link is working.
+        if (isLiveUpdate) showSync('saved');
+
+        // Also keep the native reminder series in step with the latest data.
+        if (typeof checkUpcomingAlerts === 'function') {
+            try { checkUpcomingAlerts(); } catch (_) {}
+        }
+    }
 
     // ── Load from Firestore ──
     async function loadFromCloud() {
@@ -3019,15 +3247,13 @@ if (savedTheme === "light") {
     }
 
     function deleteAccount(id) {
-        if(confirm("Delete this account?")) {
-            accDatabase = accDatabase.filter(a => a.id !== id);
-            
-            // Replaced saveToCloud() with saveToCloudNow() to force immediate deletion
-            saveToCloudNow(); 
-            
-            renderDailyTracker();
-        }
+    if(confirm("Delete this account?")) {
+        accDatabase = accDatabase.filter(a => a.id !== id);
+        txnDatabase = txnDatabase.filter(t => t.accountId !== id); // This sweeps up the ghost transactions!
+        saveToCloudNow();
+        renderDailyTracker();
     }
+}
 
     function setTxnType(type) {
         document.getElementById('txnType').value = type;
@@ -3146,12 +3372,14 @@ if (savedTheme === "light") {
         document.getElementById('geoTagRow').className = 'geo-tag-row';
         document.getElementById('geoTagLabel').innerText = 'Tap to tag location';
         document.getElementById('aiSuggestRow').style.display = 'none';
+        clearVoiceNote();
         document.querySelectorAll('.pay-chip').forEach(c => c.classList.toggle('active', c.dataset.pt === 'UPI'));
         buildCatGrid('txnCatGrid', 'txnCategory', '');
+        if (typeof _syncAttachBtnStates === 'function') _syncAttachBtnStates();
         document.getElementById('txnModal').style.display = 'flex';
     }
     var _smsTxnIsSelfTransfer = false;
-    function closeTxnModal() { document.getElementById('txnModal').style.display = 'none'; _smsTxnIsSelfTransfer = false; }
+    function closeTxnModal() { clearVoiceNote(); document.getElementById('txnModal').style.display = 'none'; _smsTxnIsSelfTransfer = false; }
 
     function saveTransaction(e) {
         e.preventDefault();
@@ -3236,6 +3464,7 @@ if (savedTheme === "light") {
             category: document.getElementById('txnCategory').value || 'other',
             payType: document.getElementById('txnPayType').value || 'UPI',
             receipt: document.getElementById('txnReceipt').value || '',
+            voiceNote: document.getElementById('txnVoiceNote').value || '',
             lat: document.getElementById('txnLat').value || '',
             lng: document.getElementById('txnLng').value || '',
             locName: document.getElementById('txnLocName').value || '',
@@ -3266,6 +3495,27 @@ if (savedTheme === "light") {
         // Always sync Bank & Cards balances after any transaction change
         renderBankCards();
         checkBudgetAlert(newTxn);
+    }
+
+    function editTransaction(id) {
+        const txn = txnDatabase.find(t => t.id === id);
+        if (!txn) return;
+        
+        // Open the modal
+        openTxnModal();
+        document.querySelector('#txnModal .modal-header h3').innerText = 'Edit Transaction';
+        document.getElementById('txnForm').dataset.editId = txn.id;
+        
+        // Fill in the existing details
+        document.getElementById('txnType').value = txn.type;
+        setTxnType(txn.type);
+        document.getElementById('txnAmt').value = txn.amount;
+        document.getElementById('txnDate').value = txn.date;
+        document.getElementById('txnNote').value = txn.note;
+        document.getElementById('txnCategory').value = txn.category;
+        document.getElementById('txnAcc').value = txn.accountId;
+        document.getElementById('txnPayType').value = txn.payType;
+        document.getElementById('txnSaveBtn').innerText = "Update Transaction";
     }
 
     function deleteTransaction(id) {
@@ -3621,7 +3871,9 @@ function setAccFilter(filter) {
                 const transferBadge = txn.isSelfTransfer ? `<span style="font-size:10px;font-weight:600;padding:2px 6px;background:rgba(91,141,239,0.15);border:1px solid var(--accent-blue);border-radius:4px;color:var(--accent-blue);">↔️ Transfer</span>` : '';
                 const locBadge = txn.locName ? `<span style="font-size:10px;color:var(--accent-green);">📍 ${txn.locName}</span>` : '';
                 const receiptBtn = txn.receipt ? `<button onclick="event.stopPropagation();viewReceipt('${txn.id}')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--accent-blue);">🧾</button>` : '';
-                txnList.innerHTML+=`<div class="txn-card"><div class="txn-left"><div class="txn-icon ${colorCls}">${catIcon}</div><div><div class="txn-note">${txn.note}</div><div class="txn-meta" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">${payBadge}${transferBadge}${locBadge}<span>${timeDisplay?timeDisplay.trim():''} ${timeDisplay?'·':''} ${accName}</span></div></div></div><div class="txn-right"><div class="txn-amt ${colorCls}">${isInc?'+':'-'}${formatINR(txn.amount)}</div><div style="display:flex;gap:6px;margin-top:4px;">${receiptBtn}<button class="txn-del" onclick="editTransaction(${txn.id})" style="color:var(--accent-blue);">Edit</button><button class="txn-del" onclick="deleteTransaction(${txn.id})">Delete</button></div></div></div>`;
+                const voiceBtn = txn.voiceNote ? `<button onclick="event.stopPropagation();playTxnVoiceNote('${txn.id}')" style="background:none;border:none;cursor:pointer;font-size:12px;">🎙️</button>` : '';
+                txnList.innerHTML+=`<div class="txn-card"><div class="txn-left"><div class="txn-icon ${colorCls}">${catIcon}</div><div><div class="txn-note">${txn.note}</div><div class="txn-meta" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">${payBadge}${transferBadge}${locBadge}<span>${timeDisplay?timeDisplay.trim():''} ${timeDisplay?'·':''} ${accName}</span></div></div></div><div class="txn-right"><div class="txn-amt ${colorCls}">${isInc?'+':'-'}${formatINR(txn.amount)}</div><div style="display:flex;gap:6px;margin-top:4px;">${receiptBtn}${voiceBtn}<button class="txn-del" onclick="editTransaction(${txn.id})" style="color:var(--accent-blue);">Edit</button><button class="txn-del" onclick="deleteTransaction(${txn.id})">Delete</button></div></div></div>`;
+
             });
         });
     }
@@ -4679,7 +4931,7 @@ function setAccFilter(filter) {
         const r = (parseFloat(document.getElementById('calc-irr').value) || 0) / 12 / 100;
         const feeRaw = parseFloat(document.getElementById('calc-fee').value) || 0;
         const res = document.getElementById('calc-results');
-        if (!P || !n || !r) { res.style.display = 'none'; return; }
+        if (!P || !n || r === undefined || isNaN(r)) { res.style.display = 'none'; return; }
 
         // Processing fee
         const feeAmt = feeRaw > 100 ? feeRaw : (P * feeRaw / 100);
@@ -5102,6 +5354,16 @@ function setAccFilter(filter) {
         } else {
             document.getElementById('receiptPreviewWrap').style.display = 'none';
         }
+        // Voice note restore when editing
+        clearVoiceNote();
+        const vn = txn.voiceNote || '';
+        if (vn) {
+            document.getElementById('txnVoiceNote').value = vn;
+            const audio = document.getElementById('voiceNoteAudio');
+            if (audio) audio.src = vn;
+            const prev = document.getElementById('voiceNotePreview');
+            if (prev) prev.style.display = 'block';
+        }
         // Location
         document.getElementById('txnLat').value     = txn.lat || '';
         document.getElementById('txnLng').value     = txn.lng || '';
@@ -5118,6 +5380,7 @@ function setAccFilter(filter) {
         document.getElementById('aiSuggestRow').style.display = 'none';
         document.getElementById('txnForm').dataset.editId = id;
         document.querySelector('#txnModal .modal-header h3').innerText = 'Edit Transaction';
+        if (typeof _syncAttachBtnStates === 'function') _syncAttachBtnStates();
         document.getElementById('txnModal').style.display = 'flex';
     }
 
@@ -6105,6 +6368,7 @@ function showDailyFab(show) {
 
         // Account matching
         if (typeof buildTxnAccountDropdown === 'function') buildTxnAccountDropdown(txn.accountId || 0);
+        if (typeof _syncAttachBtnStates === 'function') _syncAttachBtnStates();
         document.getElementById('txnModal').style.display = 'flex';
     }
 
@@ -6158,6 +6422,8 @@ function buildCatGrid(gridId, hiddenId, selected) {
             document.getElementById('txnReceipt').value = e.target.result;
             document.getElementById('receiptThumb').src = e.target.result;
             document.getElementById('receiptPreviewWrap').style.display = 'inline-block';
+            const rb = document.getElementById('receiptBtn');
+            if (rb) rb.classList.add('has-attachment');
         };
         reader.readAsDataURL(file);
     }
@@ -6165,12 +6431,30 @@ function buildCatGrid(gridId, hiddenId, selected) {
         document.getElementById('txnReceipt').value = '';
         document.getElementById('receiptPreviewWrap').style.display = 'none';
         document.getElementById('txnReceiptFile').value = '';
+        const rb = document.getElementById('receiptBtn');
+        if (rb) rb.classList.remove('has-attachment');
     }
     function viewReceipt(txnId) {
         const txn = txnDatabase.find(t => t.id == txnId); if (!txn || !txn.receipt) return;
         document.getElementById('receiptFullImg').src = txn.receipt;
         document.getElementById('receiptFullModal').style.display = 'flex';
     }
+    /**
+     * Single source of truth for the two attachment buttons' active state.
+     * Reads the hidden inputs and toggles `.has-attachment` on each button.
+     * Call this whenever the modal is opened, reset, or restored from a txn.
+     */
+    function _syncAttachBtnStates() {
+        const recBtn = document.getElementById('receiptBtn');
+        const vnBtn  = document.getElementById('voiceNoteBtn');
+        const recVal = (document.getElementById('txnReceipt')   || {}).value || '';
+        const vnVal  = (document.getElementById('txnVoiceNote') || {}).value || '';
+        if (recBtn) recBtn.classList.toggle('has-attachment', !!recVal);
+        if (vnBtn  && !vnBtn.classList.contains('recording')) {
+            vnBtn.classList.toggle('has-attachment', !!vnVal);
+        }
+    }
+    window._syncAttachBtnStates = _syncAttachBtnStates;
 
     // ── 4. GEO-TAGGING  (FIX 3) ────────────────────────────
     /**
@@ -6727,9 +7011,33 @@ function buildCatGrid(gridId, hiddenId, selected) {
     // whether or not the app is running. JS here just registers the alarm set
     // once per due date, and never posts a notification itself.
     function _ftHasNativeScheduler() {
-        return typeof NotifBridge !== 'undefined'
-            && NotifBridge
-            && typeof NotifBridge.scheduleReminder === 'function';
+        // Reminders are exposed on AndroidBridge, not NotifBridge. Keep a fallback
+        // for the legacy NotifBridge name in case older APKs are still around.
+        return (typeof AndroidBridge !== 'undefined'
+                && AndroidBridge
+                && typeof AndroidBridge.scheduleEmiReminder === 'function')
+            || (typeof NotifBridge !== 'undefined'
+                && NotifBridge
+                && typeof NotifBridge.scheduleReminder === 'function');
+    }
+    // Internal helpers that pick whichever bridge actually exists.
+    function _ftCallSchedule(kind, id, dueMs, label, amount, action) {
+        if (typeof AndroidBridge !== 'undefined'
+                && typeof AndroidBridge.scheduleEmiReminder === 'function') {
+            AndroidBridge.scheduleEmiReminder(kind, id, dueMs, label, amount, action);
+        } else if (typeof NotifBridge !== 'undefined'
+                && typeof NotifBridge.scheduleReminder === 'function') {
+            NotifBridge.scheduleReminder(kind, id, dueMs, label, amount, action);
+        }
+    }
+    function _ftCallCancel(kind, id) {
+        if (typeof AndroidBridge !== 'undefined'
+                && typeof AndroidBridge.cancelEmiReminder === 'function') {
+            AndroidBridge.cancelEmiReminder(kind, id);
+        } else if (typeof NotifBridge !== 'undefined'
+                && typeof NotifBridge.cancelReminder === 'function') {
+            NotifBridge.cancelReminder(kind, id);
+        }
     }
     function _ftSchedKey(kind, id, bucket) { return 'ft_remsched_' + kind + '_' + id + '_' + bucket; }
     function _ftShouldReschedule(kind, id, bucket, dueMs) {
@@ -6759,9 +7067,7 @@ function buildCatGrid(gridId, hiddenId, selected) {
     }
     // Public helpers the rest of the app can call when state changes.
     window.ftCancelReminders = function (kind, id) {
-        if (_ftHasNativeScheduler() && typeof NotifBridge.cancelReminder === 'function') {
-            try { NotifBridge.cancelReminder(kind, String(id)); } catch (_) {}
-        }
+        try { _ftCallCancel(kind, String(id)); } catch (_) {}
         _ftClearScheduled(kind, String(id));
     };
 
@@ -6796,7 +7102,7 @@ function buildCatGrid(gridId, hiddenId, selected) {
             var label  = (emi.product || 'EMI') + (emi.lender ? ' (' + emi.lender + ')' : '');
             var amtStr = 'Rs.' + Number(emi.emi || 0).toLocaleString('en-IN');
             try {
-                NotifBridge.scheduleReminder('emi', String(emi.id), dueAt, label, amtStr, 'emi_due');
+                _ftCallSchedule('emi', String(emi.id), dueAt, label, amtStr, 'emi_due');
                 _ftMarkScheduled('emi', emi.id, alertBmk, dueAt);
             } catch (_) {}
         });
@@ -6811,7 +7117,7 @@ function buildCatGrid(gridId, hiddenId, selected) {
             if (!_ftShouldReschedule('ccgen', c.id, alertBmk, genAt)) return;
             var label = c.bankname + (c.name ? ' ' + c.name : '');
             try {
-                NotifBridge.scheduleReminder('ccgen', String(c.id), genAt, label, '', 'cc_billgen');
+                _ftCallSchedule('ccgen', String(c.id), genAt, label, '', 'cc_billgen');
                 _ftMarkScheduled('ccgen', c.id, alertBmk, genAt);
             } catch (_) {}
         });
@@ -6828,7 +7134,7 @@ function buildCatGrid(gridId, hiddenId, selected) {
             var billAmt = (c.billAmounts && c.billAmounts[alertBmk])
                 ? 'Rs.' + Number(c.billAmounts[alertBmk]).toLocaleString('en-IN') : '';
             try {
-                NotifBridge.scheduleReminder('ccpay', String(c.id), payAt, label, billAmt, 'cc_billpay');
+                _ftCallSchedule('ccpay', String(c.id), payAt, label, billAmt, 'cc_billpay');
                 _ftMarkScheduled('ccpay', c.id, alertBmk, payAt);
             } catch (_) {}
         });
@@ -7681,6 +7987,8 @@ let paymentDatabase = JSON.parse(localStorage.getItem('type01_payments')) || DEF
 let draggedPayIndex = null;
 
 function openPaymentManager() {
+    alert("Payment Manager is opening! (You can add your custom payment logic here)");
+    // In the future, you can build a new modal here to add/remove payment types.
     document.getElementById('paymentManagerModal').style.display = 'flex';
     renderPaymentManagerList();
 }
@@ -8162,7 +8470,182 @@ document.addEventListener('DOMContentLoaded', function() {
     // delay slightly so tab may not be visible yet
     setTimeout(ccRenderHistory, 800);
 });
+// ══════════════════════════════════════════════════════════════════════════
+// VOICE NOTE — Android native (AndroidBridge) + Web MediaRecorder fallback
+// Works on both platforms; voice data saved as base64 and synced via cloud
+// ══════════════════════════════════════════════════════════════════════════
+var _vnIsRecording    = false;
+var _vnTimerInterval  = null;
+var _vnSeconds        = 0;
+var _webMR            = null;
+var _webAudioChunks   = [];
 
+function toggleVoiceRecording() {
+    if (_vnIsRecording) { _vnStopRecording(); }
+    else                { _vnStartRecording(); }
+}
+
+function _vnStartRecording() {
+    if (window.AndroidBridge && typeof AndroidBridge.startVoiceNoteRecording === 'function') {
+        try { AndroidBridge.startVoiceNoteRecording(); } catch(e) { console.error('VN bridge start error', e); }
+        return; // UI update handled by onVoiceNoteStarted callback
+    }
+    if (typeof MediaRecorder !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+            _webAudioChunks = [];
+            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _webMR = new MediaRecorder(stream, { mimeType: mimeType });
+            _webMR.ondataavailable = function(e) { if (e.data && e.data.size > 0) _webAudioChunks.push(e.data); };
+            _webMR.onstop = function() {
+                stream.getTracks().forEach(function(t) { t.stop(); });
+                var blob = new Blob(_webAudioChunks, { type: mimeType });
+                var reader = new FileReader();
+                reader.onloadend = function() { _vnOnSaved(reader.result); };
+                reader.readAsDataURL(blob);
+            };
+            _webMR.start(250);
+            _vnOnStarted();
+        }).catch(function(err) {
+            alert('Microphone access denied. Please allow microphone permission.\n(' + err.message + ')');
+        });
+        return;
+    }
+    alert('Voice recording is not supported on this browser/device.');
+}
+
+function _vnStopRecording() {
+    if (window.AndroidBridge && typeof AndroidBridge.stopVoiceNoteRecording === 'function') {
+        try { AndroidBridge.stopVoiceNoteRecording(); } catch(e) { console.error('VN bridge stop error', e); }
+        return; // UI + data handled by onVoiceNoteStopped callback
+    }
+    if (_webMR && _webMR.state !== 'inactive') { _webMR.stop(); }
+    _vnOnStopped();
+}
+
+// Android bridge callbacks (invoked by postJsCallback from Java)
+window.onVoiceNoteStarted = function() { _vnOnStarted(); };
+
+window.onVoiceNoteStopped = function(dataUrl) {
+    _vnOnStopped();
+    if (dataUrl) { _vnOnSaved(dataUrl); }
+};
+
+window.onVoiceNoteError = function(reason) {
+    _vnOnStopped();
+    if (reason && reason !== 'not_recording' && reason !== 'empty_file') {
+        alert('Voice note error: ' + reason);
+    }
+};
+
+function _vnOnStarted() {
+    _vnIsRecording = true;
+    _vnSeconds = 0;
+    var btn   = document.getElementById('voiceNoteBtn');
+    var icon  = document.getElementById('voiceNoteBtnIcon');
+    var label = document.getElementById('voiceNoteBtnLabel');
+    if (btn)   { btn.classList.add('recording'); btn.classList.remove('has-attachment'); }
+    if (icon)  icon.className = 'fa-solid fa-stop';
+    if (label) label.textContent = 'Stop';
+    var ind = document.getElementById('voiceRecordingIndicator');
+    if (ind) ind.style.display = 'flex';
+    var prev = document.getElementById('voiceNotePreview');
+    if (prev) prev.style.display = 'none';
+    clearInterval(_vnTimerInterval);
+    _vnTimerInterval = setInterval(function() {
+        _vnSeconds++;
+        var m  = Math.floor(_vnSeconds / 60);
+        var s  = _vnSeconds % 60;
+        var el = document.getElementById('voiceNoteTimer');
+        if (el) el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    }, 1000);
+}
+
+function _vnOnStopped() {
+    _vnIsRecording = false;
+    clearInterval(_vnTimerInterval);
+    _vnTimerInterval = null;
+    var btn   = document.getElementById('voiceNoteBtn');
+    var icon  = document.getElementById('voiceNoteBtnIcon');
+    var label = document.getElementById('voiceNoteBtnLabel');
+    if (btn)   btn.classList.remove('recording');
+    if (icon)  icon.className = 'fa-solid fa-microphone';
+    if (label) label.textContent = 'Voice Note';
+    var ind = document.getElementById('voiceRecordingIndicator');
+    if (ind) ind.style.display = 'none';
+    var timerEl = document.getElementById('voiceNoteTimer');
+    if (timerEl) timerEl.textContent = '0:00';
+}
+
+function _vnOnSaved(dataUrl) {
+    if (!dataUrl) return;
+    document.getElementById('txnVoiceNote').value = dataUrl;
+    var audio = document.getElementById('voiceNoteAudio');
+    if (audio) { audio.src = dataUrl; audio.load(); }
+    var prev = document.getElementById('voiceNotePreview');
+    if (prev) prev.style.display = 'block';
+    var btn = document.getElementById('voiceNoteBtn');
+    if (btn) btn.classList.add('has-attachment');
+}
+
+function clearVoiceNote() {
+    if (_vnIsRecording) {
+        if (window.AndroidBridge && typeof AndroidBridge.stopVoiceNoteRecording === 'function') {
+            try { AndroidBridge.stopVoiceNoteRecording(); } catch(e) {}
+        }
+        if (_webMR && _webMR.state !== 'inactive') { try { _webMR.stop(); } catch(e) {} }
+    }
+    _vnOnStopped();
+    var hidden = document.getElementById('txnVoiceNote');
+    if (hidden) hidden.value = '';
+    var audio = document.getElementById('voiceNoteAudio');
+    if (audio) { audio.src = ''; audio.load(); }
+    var prev = document.getElementById('voiceNotePreview');
+    if (prev) prev.style.display = 'none';
+    var btn = document.getElementById('voiceNoteBtn');
+    if (btn) btn.classList.remove('has-attachment');
+}
+
+function playTxnVoiceNote(txnId) {
+    var txn = (typeof txnDatabase !== 'undefined') ?
+        txnDatabase.find(function(t) { return t.id == txnId; }) : null;
+    if (!txn || !txn.voiceNote) { alert('No voice note found for this transaction.'); return; }
+    var existing = document.getElementById('_vnPlayOverlay');
+    if (existing) existing.remove();
+    var overlay = document.createElement('div');
+    overlay.id = '_vnPlayOverlay';
+    overlay.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+        'background:var(--card-bg,#1e1e1e);border:1px solid var(--border-color,#333);' +
+        'border-radius:14px;padding:12px 16px;z-index:99999;display:flex;' +
+        'align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);min-width:260px;';
+    overlay.innerHTML =
+        '<i class="fa-solid fa-microphone" style="color:#e74c3c;font-size:16px;"></i>' +
+        '<audio id="_vnPlayAudio" controls style="flex:1;height:32px;border-radius:8px;" src="' + txn.voiceNote + '"></audio>' +
+        '<button onclick="document.getElementById(\'_vnPlayOverlay\').remove()" ' +
+        'style="background:none;border:none;color:var(--text-secondary,#999);font-size:18px;cursor:pointer;">×</button>';
+    document.body.appendChild(overlay);
+    var aud = document.getElementById('_vnPlayAudio');
+    if (aud) aud.play().catch(function() {});
+}
+// ── End Voice Note ────────────────────────────────────────────────────────
+
+function startVoiceInput() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Your browser doesn't support voice input.");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-IN'; 
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            document.getElementById('txnNote').value = transcript;
+        };
+
+        recognition.start();
+        alert("Listening... please speak!");
+    }
 </script>
 
 <div id="categoryManagerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center; backdrop-filter: blur(5px);">
